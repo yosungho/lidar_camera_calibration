@@ -22,7 +22,8 @@
 #include <pcl_ros/point_cloud.h>
 #include <boost/foreach.hpp>
 #include <pcl_conversions/pcl_conversions.h>
-#include <velodyne_pointcloud/point_types.h>
+// #include <velodyne_pointcloud/point_types.h>
+#include <pcl/point_types.h>
 #include <pcl/common/eigen.h>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/passthrough.h>
@@ -100,9 +101,11 @@ void callback_noCam(const sensor_msgs::PointCloud2ConstPtr& msg_pc,
 	std::cout << "\n";
 
 	bool no_error = getCorners(temp_mat, retval, config.P, config.num_of_markers, config.MAX_ITERS);
+	std::cout << "callback_noCam: " << " getCorners_end(" << no_error << ")" << std::endl;
 	if(no_error){
 	    find_transformation(marker_info, config.num_of_markers, config.MAX_ITERS, lidarToCamera);
 	}
+	std::cout << "callback_noCam: " << " find_transformation_end(" << no_error << ")" << std::endl;
 	//ros::shutdown();
 }
 
@@ -160,13 +163,16 @@ void callback(const sensor_msgs::CameraInfoConstPtr& msg_info,
 
 	for(std::vector<float>::const_iterator it = msg_rt->dof.data.begin(); it != msg_rt->dof.data.end(); ++it)
 	{
+		std::cout <<"Here?" << std::endl;
 		marker_info.push_back(*it);
 		std::cout << *it << " ";
 	}
 	std::cout << "\n";
 
+	std::cout << "callback: " << "getCorners+find_transformation" << std::endl;
 	getCorners(temp_mat, retval, projection_matrix, config.num_of_markers, config.MAX_ITERS);
 	find_transformation(marker_info, config.num_of_markers, config.MAX_ITERS, lidarToCamera);
+	std::cout << "callback: " << "end" << std::endl;
 	//ros::shutdown();
 }
 

@@ -19,6 +19,7 @@ find_package(catkin
   image_geometry
   velodyne_msgs
   velodyne_pointcloud
+  message_filters
   pcl_ros
 )
 

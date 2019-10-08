@@ -14,7 +14,8 @@
 #include <pcl_ros/point_cloud.h>
 #include <boost/foreach.hpp>
 #include <pcl_conversions/pcl_conversions.h>
-#include <velodyne_pointcloud/point_types.h>
+// #include <velodyne_pointcloud/point_types.h>
+#include <pcl/point_types.h>
 #include <pcl/common/eigen.h>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/passthrough.h>
@@ -54,8 +55,6 @@ bool getCorners(cv::Mat img, pcl::PointCloud<pcl::PointXYZ> scan, cv::Mat P, int
 	cv::Mat image_edge_laser = project(P, frame, scan, NULL);
 	cv::threshold(image_edge_laser, image_edge_laser, 10, 255, 0);
 
-
-	
 
 	cv::Mat combined_rgb_laser;
 	std::vector<cv::Mat> rgb_laser_channels;
@@ -123,10 +122,11 @@ bool getCorners(cv::Mat img, pcl::PointCloud<pcl::PointXYZ> scan, cv::Mat P, int
 
 	for(int q=0; q<QUADS; q++)
 	{
-		std::cout << "---------Moving on to next marker--------\n";
+		std::cout << "---------Moving on to next marker [" << q << "/" << QUADS <<"]--------\n";
 		std::vector<Eigen::VectorXf> line_model;
 		for(int i=0; i<LINE_SEGMENTS[q]; i++)
 		{
+			std::cout << "LINE_SEGMENTS " << i << "/" << LINE_SEGMENTS[q] << std::endl;
 			cv::Point _point_;
 			std::vector<cv::Point> polygon;
 			int collected;
@@ -138,11 +138,11 @@ bool getCorners(cv::Mat img, pcl::PointCloud<pcl::PointXYZ> scan, cv::Mat P, int
 				collected = 0;
 				while(collected != LINE_SEGMENTS[q])
 				{
-					
 						cv::setMouseCallback("cloud", onMouse, &_point_);
 						
 						cv::imshow("cloud", image_edge_laser);
 						cv::waitKey(0);
+						std::cout << "clicked point: "<< _point_ << std::endl;
 						++collected;
 						//std::cout << _point_.x << " " << _point_.y << "\n";
 						polygon.push_back(_point_);
@@ -153,13 +153,12 @@ bool getCorners(cv::Mat img, pcl::PointCloud<pcl::PointXYZ> scan, cv::Mat P, int
 			polygon = stored_corners[4*q+i];
 
 			cv::Mat polygon_image = cv::Mat::zeros(image_edge_laser.size(), CV_8UC1);
-			
 			rgb_laser_channels.clear();
 			rgb_laser_channels.push_back(image_edge_laser);
 			rgb_laser_channels.push_back(cv::Mat::zeros(image_edge_laser.size(), CV_8UC1));
 			rgb_laser_channels.push_back(cv::Mat::zeros(image_edge_laser.size(), CV_8UC1));
 			cv::merge(rgb_laser_channels, combined_rgb_laser);
-				
+
 			for( int j = 0; j < 4; j++ )
 			{
 				cv::line(combined_rgb_laser, polygon[j], polygon[(j+1)%4], cv::Scalar(0, 255, 0));
@@ -171,14 +170,13 @@ bool getCorners(cv::Mat img, pcl::PointCloud<pcl::PointXYZ> scan, cv::Mat P, int
 
 			for(std::map<std::pair<int, int>, std::vector<float> >::iterator it=c2D_to_3D.begin(); it!=c2D_to_3D.end(); ++it)
 			{
-			
 				if (cv::pointPolygonTest(cv::Mat(polygon), cv::Point(it->first.first, it->first.second), true) > 0)
 				{
 					cloud->push_back(pcl::PointXYZ(it->second[0],it->second[1],it->second[2]));
 					rectangle(combined_rgb_laser, cv::Point(it->first.first, it->first.second), cv::Point(it->first.first, it->first.second), cv::Scalar(0, 0, 255), 3, 8, 0); // RED point
 				}
 			}
-			
+
 			if(cloud->size() < 2){ return false;}
 			
 			cv::imshow("polygon", combined_rgb_laser);
@@ -186,15 +184,13 @@ bool getCorners(cv::Mat img, pcl::PointCloud<pcl::PointXYZ> scan, cv::Mat P, int
 
 			//pcl::io::savePCDFileASCII("/home/vishnu/line_cloud.pcd", *cloud);
 			
-			
-
 			std::vector<int> inliers;
 			Eigen::VectorXf model_coefficients;
 
 
 			// created RandomSampleConsensus object and compute the appropriated model
 			pcl::SampleConsensusModelLine<pcl::PointXYZ>::Ptr model_l(new pcl::SampleConsensusModelLine<pcl::PointXYZ> (cloud));
-				
+
 			pcl::RandomSampleConsensus<pcl::PointXYZ> ransac(model_l);
 			ransac.setDistanceThreshold (0.01);
 			ransac.computeModel();
@@ -212,8 +208,6 @@ bool getCorners(cv::Mat img, pcl::PointCloud<pcl::PointXYZ> scan, cv::Mat P, int
 
 		
 		/* calculate approximate intersection of lines */
-		
-
 		Eigen::Vector4f p1, p2, p_intersect;
 		pcl::PointCloud<pcl::PointXYZ>::Ptr corners(new pcl::PointCloud<pcl::PointXYZ>);
 		for(int i=0; i<LINE_SEGMENTS[q]; i++)
@@ -229,9 +223,8 @@ bool getCorners(cv::Mat img, pcl::PointCloud<pcl::PointXYZ> scan, cv::Mat P, int
 			//std::cout << "Distance between the lines: " << (p1 - p2).squaredNorm () << "\n";
 			std::cout << p_intersect(0) << " " << p_intersect(1) << " " << p_intersect(2) <<  "\n";
 			outfile << p_intersect(0) << " " << p_intersect(1) << " " << p_intersect(2) <<  "\n";
-
 		}
-		
+
 		*board_corners += *corners;
 
 		std::cout << "Distance between the corners:\n";
@@ -247,16 +240,18 @@ bool getCorners(cv::Mat img, pcl::PointCloud<pcl::PointXYZ> scan, cv::Mat P, int
 
 						<< std::endl;
 		}
-
-
 	}
 	outfile.close();
-
+	
 	iteration_count++;
+	
 	if(iteration_count == MAX_ITERS)
 	{
+		std::cout << "iteration_count == MAX_ITERS" << std::endl;
 		ros::shutdown();
 	}
+
+	std::cout << "end of the func 'getCorner'" << std::endl;
 	return true;
 	/* store point cloud with intersection points */
 	//pcl::io::savePCDFileASCII("/home/vishnu/RANSAC_marker.pcd", *marker);
