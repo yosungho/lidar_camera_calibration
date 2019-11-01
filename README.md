@@ -2,7 +2,7 @@
 
 ![alt text](images/pcl.png "Pointcloud of the setup")
 
-### Additional Directions by Sungho
+### Additional Directions by yosungho
 This package is the fixed version, working in ROS melodic and Ubuntu 18.04.
 1. Download and Catkin_make the Velodyne Package: http://wiki.ros.org/velodyne
 2. git clone https://github.com/yosungho/lidar_camera_calibration.git
